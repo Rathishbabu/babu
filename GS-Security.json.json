@@ -1,0 +1,76 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "Creation of Security Groups",
+	"Parameters": {
+		"NetworkStack": {
+			"Type":"String",
+			"Default": "GS-Network"
+				}
+	},
+
+	"Resources": {
+		"SecGroupLinux": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription":"SSH+HTTP+8080",
+				"GroupName": "GS-SG-Linux",
+				"VpcId": {"Fn::ImportValue": {"Fn::Sub": "${NetworkStack}-VpcId"}},
+				"SecurityGroupIngress": [{
+         				"IpProtocol" : "tcp",
+         				"FromPort" : 80,
+         				"ToPort" : 80,
+         				"CidrIp" : "0.0.0.0/0"
+      					}, {
+         				"IpProtocol" : "tcp",
+         				"FromPort" : 22,
+         				"ToPort" : 22,
+         				"CidrIp" : "0.0.0.0/0"
+      					},{
+         				"IpProtocol" : "tcp",
+         				"FromPort" : 8080,
+         				"ToPort" : 8080,
+         				"CidrIp" : "0.0.0.0/0"
+      					}],
+				"Tags" : [{"Key":"Purpose", "Value":"Training"}, {"Key":"Name", "Value":"GS-SG-Linux"}]
+				}
+			},
+		"SecGroupWindows": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription":"RDP+HTTP+8080",
+				"GroupName": "GS-SG-Windows",
+				"VpcId": {"Fn::ImportValue": {"Fn::Sub": "${NetworkStack}-VpcId"}},
+				"SecurityGroupIngress": [{
+         				"IpProtocol" : "tcp",
+         				"FromPort" : 80,
+         				"ToPort" : 80,
+         				"CidrIp" : "0.0.0.0/0"
+      					}, {
+         				"IpProtocol" : "tcp",
+         				"FromPort" : 3389,
+         				"ToPort" : 3389,
+         				"CidrIp" : "0.0.0.0/0"
+      					},{
+         				"IpProtocol" : "tcp",
+         				"FromPort" : 8080,
+         				"ToPort" : 8080,
+         				"CidrIp" : "0.0.0.0/0"
+      					}],
+				"Tags" : [{"Key":"Purpose", "Value":"Training"}, {"Key":"Name", "Value":"GS-SG-Windows"}]
+
+				}
+			}
+	},
+	"Outputs": {
+		"LinuxSGOut": {
+			"Description": "SG for Linux",
+			"Value": {"Ref": "SecGroupLinux"},
+			"Export": {"Name": {"Fn::Sub": "${AWS::StackName}-LinuxSG"}}
+			},
+		"WindowsSGOut": {
+			"Description": "SG for Windows",
+			"Value": {"Ref": "SecGroupWindows"},
+			"Export": {"Name": {"Fn::Sub": "${AWS::StackName}-WindowsSG"}}
+			}
+		}
+}

@@ -1,0 +1,58 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "Creation of EC2 Instance",
+	"Parameters":{
+		"InstanceType":{
+			"Type":"String",
+			"Default":"t2.micro",
+			"AllowedValues":["t2.micro","t2.nano","t2.small", "t2.medium"]
+			},
+		"KeyName":{
+			"Type":"AWS::EC2::KeyPair::KeyName",
+			"Default":"GS-KeyPair"
+			},
+		"ImageId":{
+			"Type":"String",
+			"Default":"ami-094a644f1fb9e4ce3",
+			"AllowedValues":["ami-094a644f1fb9e4ce3","ami-045e1f06f29929467"]
+			},
+		"SecGroupStack": {
+			"Type":"String",
+			"Default": "GS-Security"
+			},
+		"NetworkStack": {
+			"Type": "String",
+			"Default": "GS-Network"
+			}
+	},
+	"Resources": {
+		"Ec2Instance": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {"Ref":"ImageId"},
+				"InstanceType": {"Ref":"InstanceType"},
+				"KeyName": {"Ref":"KeyName"},
+				"SecurityGroupIds": [{"Fn::ImportValue":{"Fn::Sub": "${SecGroupStack}-WindowsSG"}}],
+				"SubnetId": {"Fn::ImportValue": {"Fn::Sub": "${NetworkStack}-PrivateSubnet"}},
+				"BlockDeviceMappings": [{
+					"DeviceName": "/dev/sda1",
+					"Ebs": {
+						"DeleteOnTermination":"True"
+					}
+				}],
+				"Tags": [{
+					"Key": "Name",
+					"Value": "GS-Instance"},
+					{"Key":"Purpose",
+					"Value":"Training"}]
+			}
+		}
+	},
+	"Outputs" : {
+  		"InstanceIdOut" : {
+    			"Description" : "Output of the Instance",
+    			"Value" : {"Ref":"Ec2Instance"}
+  			}
+	}
+	
+}

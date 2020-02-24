@@ -1,0 +1,154 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "Network Setup of GS",
+	"Parameters": {
+		"AvailabilityZone":{
+			"Type": "String",
+			"Default": "us-east-1a"
+				},
+		"VPCCIDR": {
+			"Type": "String",
+			"Default": "10.20.0.0/24"
+				},
+		"SubnetCIDRPublic": {
+			"Type": "String",
+			"Default": "10.20.0.0/26" 
+				},
+		"SubnetCIDRPrivate": {
+			"Type": "String",
+			"Default": "10.20.0.64/26"
+				}
+	},
+				
+	"Resources": {
+		"VPCCustom": {
+  			"Type" : "AWS::EC2::VPC",
+ 			 "Properties" : {
+      				"CidrBlock" : {"Ref": "VPCCIDR"},
+      				"EnableDnsHostnames" : "false",
+      				"InstanceTenancy" : "default",
+      				"Tags" : [{"Key":"Purpose", "Value":"Training"}, {"Key":"Name", "Value":"GS-VPC"}]
+    				}
+			},	
+		"IGW": {
+			"Type" : "AWS::EC2::InternetGateway",
+			"Properties":{
+				"Tags" : [{"Key":"Purpose", "Value":"Training"}, {"Key":"Name", "Value":"GS-IGW"}]
+				}
+			},
+		"IGWAttachment":{
+			"Type": "AWS::EC2::VPCGatewayAttachment",
+			"Properties":{
+				"InternetGatewayId": {"Ref": "IGW"},
+				"VpcId": {"Ref": "VPCCustom"}
+				}
+			},
+		"SubnetPublic": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"AvailabilityZone": {"Ref": "AvailabilityZone"},
+				"CidrBlock": {"Ref":"SubnetCIDRPublic"},
+				"MapPublicIpOnLaunch":"true",
+				"VpcId": {"Ref": "VPCCustom"},
+				"Tags" : [{"Key":"Purpose", "Value":"Training"}, {"Key":"Name", "Value":"GS-Public"}]
+					}
+				},
+		"SubnetPrivate": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"AvailabilityZone": {"Ref": "AvailabilityZone"},
+				"CidrBlock": {"Ref":"SubnetCIDRPrivate"},
+				"MapPublicIpOnLaunch":"False",
+				"VpcId": {"Ref": "VPCCustom"},
+				"Tags" : [{"Key":"Purpose", "Value":"Training"}, {"Key":"Name", "Value":"GS-Private"}]
+					}
+				},
+
+		"RouteTablePublic": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {"Ref": "VPCCustom"},
+				"Tags" : [{"Key":"Purpose", "Value":"Training"}, {"Key":"Name", "Value":"GS-RT-Public"}]
+					}
+				},
+
+		"RouteTablePrivate": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {"Ref": "VPCCustom"},
+				"Tags" : [{"Key":"Purpose", "Value":"Training"}, {"Key":"Name", "Value":"GS-RT-Private"}]
+					}
+				},
+
+		"AllocateEIP": {
+			"Type": "AWS::EC2::EIP",
+			"Properties": {
+				"Domain": "vpc",
+				"Tags": [{"Key":"Purpose", "Value":"Training"}, {"Key":"Name", "Value":"GS-EIP"}]
+					}
+				},
+		"NATGateway": {
+			"Type": "AWS::EC2::NatGateway",
+			"Properties": {
+				"AllocationId": { "Fn::GetAtt" : ["AllocateEIP", "AllocationId"]},
+				"SubnetId": {"Ref": "SubnetPublic"},
+				"Tags": [{"Key":"Purpose", "Value":"Training"}, {"Key":"Name", "Value":"GS-NATGateway"}]
+					}
+				},
+		"RouteTableRoutesPublic": {
+				"Type": "AWS::EC2::Route",
+				"Properties": {
+					"DestinationCidrBlock": "0.0.0.0/0",
+					"GatewayId": {"Ref": "IGW"},
+					"RouteTableId": {"Ref": "RouteTablePublic"}
+						}
+				},
+		"RouteTableRoutesPrivate": {
+				"Type": "AWS::EC2::Route",
+				"Properties": {
+					"DestinationCidrBlock": "0.0.0.0/0",
+					"NatGatewayId": {"Ref": "NATGateway"},
+					"RouteTableId": {"Ref": "RouteTablePrivate"}
+						}
+				},
+
+		"RouteTableAssociationPublic": {
+				"Type": "AWS::EC2::SubnetRouteTableAssociation",
+				"Properties": {
+					"RouteTableId": {"Ref": "RouteTablePublic"},
+					"SubnetId": {"Ref": "SubnetPublic"}
+						}
+				},
+		"RouteTableAssociationPrivate": {
+				"Type": "AWS::EC2::SubnetRouteTableAssociation",
+				"Properties": {
+					"RouteTableId": {"Ref": "RouteTablePrivate"},
+					"SubnetId": {"Ref": "SubnetPrivate"}
+						}
+				}
+
+				
+		},
+	"Outputs": {
+		"VPCGS": {
+			"Description": "VPC ID custom",
+			"Value": {"Ref": "VPCCustom"},
+			"Export": {"Name": {"Fn::Sub":"${AWS::StackName}-VpcId"}}
+			},
+		"SubnetPublicOut": {
+			"Description": "Subnet ID Public",
+			"Value": {"Ref": "SubnetPublic"},
+			"Export": {"Name": {"Fn::Sub": "${AWS::StackName}-PublicSubnet"}}
+			},
+		"SubnetPrivateOut": {
+			"Description": "Subnet ID Private",
+			"Value": {"Ref": "SubnetPrivate"},
+			"Export": {"Name": {"Fn::Sub":"${AWS::StackName}-PrivateSubnet"}}
+			},
+		"StackNameOut": {
+			"Description": "Stack Name",
+			"Value": {"Ref": "AWS::StackName"},
+			"Export": {"Name": {"Fn::Sub":"${AWS::StackName}"}}
+			}
+		}			
+}
